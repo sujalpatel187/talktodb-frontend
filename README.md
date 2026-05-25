@@ -1,36 +1,116 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# TalkToDB — Frontend
+
+A **Next.js 16** dashboard that lets you chat with your database using natural language. Type a question in plain English, and the AI converts it into SQL, executes it, and returns the result — no SQL knowledge required.
+
+---
+
+## Features
+
+| Page | Description |
+|------|-------------|
+| **Chat** | Conversational interface — ask questions in natural language, get back SQL + results with a typewriter streaming effect |
+| **Training** | Teach the AI by adding Question↔SQL pairs, DDL schemas, and documentation — supports single entry and bulk upload |
+| **Collection** | Browse, search, edit, and delete all training data stored in the Qdrant vector database |
+
+- Responsive layout with a collapsible sidebar (mobile-friendly)
+- SQL code blocks with one-click copy
+- Animated typing indicator while the AI is thinking
+- Toast notifications for all actions
+- Dark-themed code blocks, light UI panels
+
+---
+
+## Tech Stack
+
+- **Framework:** [Next.js 16](https://nextjs.org/) (App Router)
+- **UI:** React 19 + [Tailwind CSS v4](https://tailwindcss.com/)
+- **Fonts:** Geist Sans & Geist Mono (via `next/font`)
+- **Backend API:** Connects to a Python backend (default: `http://localhost:8000`)
+
+---
+
+## Project Structure
+
+```
+frontend/
+├── app/
+│   ├── layout.jsx          # Root layout with Sidebar
+│   ├── page.jsx            # Redirects → /chat
+│   ├── chat/page.jsx       # Chat interface
+│   ├── training/page.jsx   # Training data input forms
+│   └── collection/page.jsx # Collection viewer & editor
+├── components/
+│   └── Sidebar.jsx         # Navigation sidebar
+├── lib/
+│   └── api.js              # All backend API calls
+└── public/
+```
+
+---
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 18+
+- The TalkToDB backend running at `http://localhost:8000`
+
+### Installation
 
 ```bash
+# Clone the repository
+git clone https://github.com/sujalpatel187/talktodb-frontend.git
+cd talktodb-frontend
+
+# Install dependencies
+npm install
+
+# Start the development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+### Environment Variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Create a `.env.local` file in the root to point to your backend:
 
-## Learn More
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8000
+```
 
-To learn more about Next.js, take a look at the following resources:
+If not set, it defaults to `http://localhost:8000`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Available Scripts
 
-## Deploy on Vercel
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start development server |
+| `npm run build` | Build for production |
+| `npm run start` | Start production server |
+| `npm run lint` | Run ESLint |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## API Endpoints Used
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/chat/` | Send a natural language question |
+| `POST` | `/train/question-sql` | Add a Question↔SQL pair |
+| `POST` | `/train/question-sql/bulk` | Bulk add Question↔SQL pairs |
+| `POST` | `/train/ddl` | Add a DDL schema |
+| `POST` | `/train/ddl/bulk` | Bulk add DDL schemas |
+| `POST` | `/train/docs` | Add documentation text |
+| `POST` | `/train/docs/bulk` | Bulk add documentation |
+| `GET` | `/collection/:type` | List training data (`question-sql`, `ddl`, `docs`) |
+| `PUT` | `/collection/:type/:id` | Update a training record |
+| `DELETE` | `/collection/:type/:id` | Delete a training record |
+
+---
+
+## License
+
+This project is private and not licensed for public distribution.
