@@ -16,8 +16,8 @@ export default function RootLayout({ children }) {
       <body style={{ background: "#f8fafc", color: "#0f172a" }}>
         <div className="flex min-h-screen">
           <Sidebar />
-          <main className="flex-1 flex flex-col" style={{ marginLeft: "0" }}>
-            <div className="md:ml-64 flex-1 flex flex-col">
+          <main className="flex-1 flex flex-col min-w-0" style={{ marginLeft: "0" }}>
+            <div className="md:ml-64 flex-1 flex flex-col min-w-0">
               {children}
             </div>
           </main>

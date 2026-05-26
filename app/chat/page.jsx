@@ -3,11 +3,193 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { sendChat } from "@/lib/api";
 
+// ─── Results Table ────────────────────────────────────────────────────────────
+function ResultsTable({ columns, rows, rowCount, onStreamTick }) {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [visibleRowCount, setVisibleRowCount] = useState(0);
+  const rowsPerPage = 10;
+
+  const totalPages = Math.ceil(rows.length / rowsPerPage) || 1;
+  const indexOfLastRow = currentPage * rowsPerPage;
+  const indexOfFirstRow = indexOfLastRow - rowsPerPage;
+  const currentRows = rows.slice(indexOfFirstRow, indexOfLastRow);
+
+  useEffect(() => {
+    setVisibleRowCount(0);
+    if (currentRows.length === 0) return;
+    let i = 0;
+    const interval = setInterval(() => {
+      i++;
+      if (i >= currentRows.length) {
+        setVisibleRowCount(currentRows.length);
+        clearInterval(interval);
+      } else {
+        setVisibleRowCount(i);
+      }
+      onStreamTick?.();
+    }, 60); // 60ms per row for a sleek cascading stream
+    return () => clearInterval(interval);
+  }, [currentPage, rows]);  // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    onStreamTick?.();
+  }, []);  // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <div
+      className="mt-3 rounded-xl overflow-hidden w-full"
+      style={{ border: "1px solid rgba(16,185,129,0.3)", maxWidth: "100%" }}
+    >
+      {/* Header */}
+      <div
+        className="flex items-center justify-between px-4 py-2"
+        style={{ background: "rgba(16,185,129,0.08)", borderBottom: "1px solid rgba(16,185,129,0.2)" }}
+      >
+        <div className="flex items-center gap-2">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#10b981" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+          </svg>
+          <span className="text-xs font-semibold" style={{ color: "#10b981" }}>
+            Query Results
+          </span>
+        </div>
+        <span
+          className="text-xs px-2 py-0.5 rounded-full"
+          style={{ background: "rgba(16,185,129,0.15)", color: "#10b981", border: "1px solid rgba(16,185,129,0.3)" }}
+        >
+          {rowCount} row{rowCount !== 1 ? "s" : ""}
+        </span>
+      </div>
+      {/* Table */}
+      <div style={{ maxHeight: "400px", overflowY: "auto", overflowX: "auto", width: "100%" }}>
+        <table className="w-full text-xs" style={{ borderCollapse: "collapse", tableLayout: "auto" }}>
+          <thead>
+            <tr style={{ background: "#f8fafc" }}>
+              {columns.map((col, i) => {
+                const formattedCol = col
+                  ? col
+                      .split("_")
+                      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                      .join(" ")
+                  : "";
+                return (
+                  <th
+                    key={i}
+                    className="text-left px-3 py-2 font-semibold whitespace-nowrap"
+                    style={{ color: "#334155", borderBottom: "2px solid #e2e8f0", position: "sticky", top: 0, background: "#f8fafc", zIndex: 1 }}
+                  >
+                    {formattedCol}
+                  </th>
+                );
+              })}
+            </tr>
+          </thead>
+          <tbody>
+            {currentRows.slice(0, visibleRowCount).map((row, ri) => (
+              <tr
+                key={ri}
+                className="fade-in"
+                style={{
+                  background: ri % 2 === 0 ? "#ffffff" : "#f8fafc",
+                  borderBottom: "1px solid #f1f5f9",
+                }}
+              >
+                {row.map((cell, ci) => (
+                  <td
+                    key={ci}
+                    className="px-3 py-2 whitespace-nowrap"
+                    style={{ color: cell === null ? "#94a3b8" : "#0f172a", fontStyle: cell === null ? "italic" : "normal" }}
+                  >
+                    {cell === null ? "NULL" : String(cell)}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Pagination Footer */}
+      {rows.length > 0 && (
+        <div
+          className="flex flex-col sm:flex-row items-center justify-between px-4 py-2.5 gap-2"
+          style={{ background: "#f8fafc", borderTop: "1px solid rgba(16,185,129,0.2)" }}
+        >
+          <div className="text-[11px] font-medium" style={{ color: "#64748b" }}>
+            Showing {rows.length === 0 ? 0 : indexOfFirstRow + 1} to {Math.min(indexOfLastRow, rows.length)} of {rows.length} entries
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setCurrentPage(1)}
+              disabled={currentPage === 1}
+              className="px-2 py-1 rounded-md text-[11px] font-semibold transition-all duration-200"
+              style={{
+                background: currentPage === 1 ? "#f1f5f9" : "#ffffff",
+                color: currentPage === 1 ? "#94a3b8" : "#334155",
+                border: "1px solid #e2e8f0",
+                cursor: currentPage === 1 ? "not-allowed" : "pointer"
+              }}
+            >
+              First
+            </button>
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="px-2 py-1 rounded-md text-[11px] font-semibold transition-all duration-200"
+              style={{
+                background: currentPage === 1 ? "#f1f5f9" : "#ffffff",
+                color: currentPage === 1 ? "#94a3b8" : "#334155",
+                border: "1px solid #e2e8f0",
+                cursor: currentPage === 1 ? "not-allowed" : "pointer"
+              }}
+            >
+              Previous
+            </button>
+            <span
+              className="px-2 py-1 rounded-md text-[11px] font-bold"
+              style={{ background: "rgba(16,185,129,0.1)", color: "#10b981", border: "1px solid rgba(16,185,129,0.2)" }}
+            >
+              {currentPage} / {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className="px-2 py-1 rounded-md text-[11px] font-semibold transition-all duration-200"
+              style={{
+                background: currentPage === totalPages ? "#f1f5f9" : "#ffffff",
+                color: currentPage === totalPages ? "#94a3b8" : "#334155",
+                border: "1px solid #e2e8f0",
+                cursor: currentPage === totalPages ? "not-allowed" : "pointer"
+              }}
+            >
+              Next
+            </button>
+            <button
+              onClick={() => setCurrentPage(totalPages)}
+              disabled={currentPage === totalPages}
+              className="px-2 py-1 rounded-md text-[11px] font-semibold transition-all duration-200"
+              style={{
+                background: currentPage === totalPages ? "#f1f5f9" : "#ffffff",
+                color: currentPage === totalPages ? "#94a3b8" : "#334155",
+                border: "1px solid #e2e8f0",
+                cursor: currentPage === totalPages ? "not-allowed" : "pointer"
+              }}
+            >
+              Last
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── SQL Code Block ───────────────────────────────────────────────────────────
-function SqlBlock({ sql, streaming = false, onStreamTick }) {
+function SqlBlock({ sql, streaming = false, onStreamTick, onStreamComplete }) {
   const [copied, setCopied] = useState(false);
   const [displayedSql, setDisplayedSql] = useState(streaming ? "" : sql);
   const [sqlCursor, setSqlCursor] = useState(streaming);
+
 
   useEffect(() => {
     if (!streaming || !sql) return;
@@ -21,6 +203,7 @@ function SqlBlock({ sql, streaming = false, onStreamTick }) {
         setSqlCursor(false);
         clearInterval(timer);
         onStreamTick?.();
+        onStreamComplete?.();
       } else {
         setDisplayedSql(sql.slice(0, i));
         onStreamTick?.();
@@ -36,26 +219,27 @@ function SqlBlock({ sql, streaming = false, onStreamTick }) {
     });
   }, [sql]);
 
+
   return (
-    <div
-      className="mt-3 rounded-xl overflow-hidden"
-      style={{ background: "#0d1117", border: "1px solid rgba(108,99,255,0.3)" }}
-    >
-      {/* Header bar */}
       <div
-        className="flex items-center justify-between px-4 py-2"
-        style={{ background: "rgba(108,99,255,0.1)", borderBottom: "1px solid rgba(108,99,255,0.2)" }}
+        className="mt-3 rounded-xl overflow-hidden w-full max-w-full"
+        style={{ background: "#0d1117", border: "1px solid rgba(108,99,255,0.3)", maxWidth: "100%" }}
       >
-        <div className="flex items-center gap-2">
-          <div className="flex gap-1">
-            <span className="w-2.5 h-2.5 rounded-full bg-red-500/60" />
-            <span className="w-2.5 h-2.5 rounded-full bg-yellow-500/60" />
-            <span className="w-2.5 h-2.5 rounded-full bg-green-500/60" />
+        {/* Header bar */}
+        <div
+          className="flex items-center justify-between px-4 py-2"
+          style={{ background: "rgba(108,99,255,0.1)", borderBottom: "1px solid rgba(108,99,255,0.2)" }}
+        >
+          <div className="flex items-center gap-2">
+            <div className="flex gap-1">
+              <span className="w-2.5 h-2.5 rounded-full bg-red-500/60" />
+              <span className="w-2.5 h-2.5 rounded-full bg-yellow-500/60" />
+              <span className="w-2.5 h-2.5 rounded-full bg-green-500/60" />
+            </div>
+            <span className="text-xs font-semibold ml-1" style={{ color: "#6c63ff" }}>
+              Generated SQL
+            </span>
           </div>
-          <span className="text-xs font-semibold ml-1" style={{ color: "#6c63ff" }}>
-            Generated SQL
-          </span>
-        </div>
         <button
           onClick={copy}
           className="flex items-center gap-1.5 text-xs px-3 py-1 rounded-lg transition-all duration-200"
@@ -81,30 +265,30 @@ function SqlBlock({ sql, streaming = false, onStreamTick }) {
             </>
           )}
         </button>
+        </div>
+        {/* Code */}
+        <pre
+          className="p-4 overflow-x-auto text-sm leading-relaxed w-full max-w-full"
+          style={{ color: "#c9d1d9", fontFamily: "var(--font-geist-mono, monospace)", margin: 0, maxWidth: "100%", overflowX: "auto" }}
+        >
+          <code>
+            {displayedSql}
+            {sqlCursor && (
+              <span
+                style={{
+                  display: "inline-block",
+                  width: "2px",
+                  height: "1em",
+                  background: "#6c63ff",
+                  marginLeft: "1px",
+                  verticalAlign: "text-bottom",
+                  animation: "blink-cursor 0.7s steps(1) infinite",
+                }}
+              />
+            )}
+          </code>
+        </pre>
       </div>
-      {/* Code */}
-      <pre
-        className="p-4 overflow-x-auto text-sm leading-relaxed"
-        style={{ color: "#c9d1d9", fontFamily: "var(--font-geist-mono, monospace)", margin: 0 }}
-      >
-        <code>
-          {displayedSql}
-          {sqlCursor && (
-            <span
-              style={{
-                display: "inline-block",
-                width: "2px",
-                height: "1em",
-                background: "#6c63ff",
-                marginLeft: "1px",
-                verticalAlign: "text-bottom",
-                animation: "blink-cursor 0.7s steps(1) infinite",
-              }}
-            />
-          )}
-        </code>
-      </pre>
-    </div>
   );
 }
 
@@ -146,6 +330,7 @@ function ChatMessage({ msg, onStreamTick }) {
   );
   const [showSql, setShowSql] = useState(!msg.streaming);
   const [cursor, setCursor] = useState(!!msg.streaming && !!msg.content);
+  const [sqlFinished, setSqlFinished] = useState(!msg.streaming || !msg.sql);
 
   useEffect(() => {
     if (!msg.streaming || !msg.content) return;
@@ -197,9 +382,9 @@ function ChatMessage({ msg, onStreamTick }) {
           <path strokeLinecap="round" strokeLinejoin="round" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
         </svg>
       </div>
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 max-w-full overflow-hidden">
         <div
-          className="rounded-2xl rounded-tl-sm p-4 text-sm leading-relaxed"
+          className="rounded-2xl rounded-tl-sm p-4 text-sm leading-relaxed max-w-full overflow-hidden"
           style={{ background: "#ffffff", border: "1px solid #e2e8f0", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}
         >
           {msg.error ? (
@@ -232,7 +417,22 @@ function ChatMessage({ msg, onStreamTick }) {
               </p>
               {showSql && msg.sql && (
                 <div style={{ animation: "fadeInUp 0.35s ease forwards" }}>
-                  <SqlBlock sql={msg.sql} streaming={!!msg.streaming} onStreamTick={onStreamTick} />
+                  <SqlBlock
+                    sql={msg.sql}
+                    streaming={!!msg.streaming}
+                    onStreamTick={onStreamTick}
+                    onStreamComplete={() => setSqlFinished(true)}
+                  />
+                </div>
+              )}
+              {showSql && sqlFinished && msg.columns && msg.columns.length > 0 && (
+                <div style={{ animation: "fadeInUp 0.35s ease forwards" }}>
+                  <ResultsTable
+                    columns={msg.columns}
+                    rows={msg.rows}
+                    rowCount={msg.rowCount}
+                    onStreamTick={onStreamTick}
+                  />
                 </div>
               )}
             </>
@@ -306,6 +506,9 @@ export default function ChatPage() {
             role: "assistant",
             content: data.error ? "" : (data.userMessage || "Query processed successfully."),
             sql: data.generatedSQL || null,
+            columns: data.columns || [],
+            rows: data.rows || [],
+            rowCount: data.rowCount || 0,
             error: data.error || null,
             streaming: !data.error,
             time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
@@ -347,7 +550,7 @@ export default function ChatPage() {
   const isEmpty = messages.length <= 1;
 
   return (
-    <div className="flex flex-col h-screen" style={{ background: "#f8fafc" }}>
+    <div className="flex flex-col h-screen max-w-full overflow-hidden" style={{ background: "#f8fafc" }}>
       {/* ── Header ── */}
       <header
         className="flex items-center justify-between px-6 py-4 flex-shrink-0"
@@ -376,7 +579,7 @@ export default function ChatPage() {
       </header>
 
       {/* ── Messages ── */}
-      <div className="flex-1 overflow-y-auto px-4 pt-4 pb-32 sm:px-6">
+      <div className="flex-1 overflow-y-auto px-4 pt-4 pb-32 sm:px-6 max-w-full overflow-x-hidden">
         {messages.map((msg, i) => (
           <ChatMessage key={i} msg={msg} onStreamTick={scrollToBottom} />
         ))}
