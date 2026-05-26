@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { sendChat } from "@/lib/api";
 
 // ─── SQL Code Block ───────────────────────────────────────────────────────────
-function SqlBlock({ sql, streaming = false }) {
+function SqlBlock({ sql, streaming = false, onStreamTick }) {
   const [copied, setCopied] = useState(false);
   const [displayedSql, setDisplayedSql] = useState(streaming ? "" : sql);
   const [sqlCursor, setSqlCursor] = useState(streaming);
@@ -20,8 +20,10 @@ function SqlBlock({ sql, streaming = false }) {
         setDisplayedSql(sql);
         setSqlCursor(false);
         clearInterval(timer);
+        onStreamTick?.();
       } else {
         setDisplayedSql(sql.slice(0, i));
+        onStreamTick?.();
       }
     }, MS);
     return () => clearInterval(timer);
@@ -135,7 +137,7 @@ function TypingIndicator() {
 }
 
 // ─── Single Message ───────────────────────────────────────────────────────────
-function ChatMessage({ msg }) {
+function ChatMessage({ msg, onStreamTick }) {
   const isUser = msg.role === "user";
 
   // Typewriter streaming effect for assistant messages
@@ -158,8 +160,10 @@ function ChatMessage({ msg }) {
         setCursor(false);
         setShowSql(true);
         clearInterval(timer);
+        onStreamTick?.();
       } else {
         setDisplayed(content.slice(0, i));
+        onStreamTick?.();
       }
     }, MS);
     return () => clearInterval(timer);
@@ -228,7 +232,7 @@ function ChatMessage({ msg }) {
               </p>
               {showSql && msg.sql && (
                 <div style={{ animation: "fadeInUp 0.35s ease forwards" }}>
-                  <SqlBlock sql={msg.sql} streaming={!!msg.streaming} />
+                  <SqlBlock sql={msg.sql} streaming={!!msg.streaming} onStreamTick={onStreamTick} />
                 </div>
               )}
             </>
@@ -265,6 +269,10 @@ export default function ChatPage() {
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
 
+  const scrollToBottom = useCallback(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, []);
+
   // Stamp the welcome message time only on the client to avoid SSR/client mismatch
   useEffect(() => {
     setMessages((prev) =>
@@ -277,8 +285,8 @@ export default function ChatPage() {
   }, []);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, loading]);
+    scrollToBottom();
+  }, [messages, loading, scrollToBottom]);
 
   const handleSend = useCallback(
     async (text) => {
@@ -368,9 +376,9 @@ export default function ChatPage() {
       </header>
 
       {/* ── Messages ── */}
-      <div className="flex-1 overflow-y-auto px-4 pt-4 pb-2 sm:px-6">
+      <div className="flex-1 overflow-y-auto px-4 pt-4 pb-32 sm:px-6">
         {messages.map((msg, i) => (
-          <ChatMessage key={i} msg={msg} />
+          <ChatMessage key={i} msg={msg} onStreamTick={scrollToBottom} />
         ))}
         {loading && <TypingIndicator />}
         <div ref={bottomRef} />
