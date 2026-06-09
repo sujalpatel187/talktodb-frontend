@@ -14,8 +14,8 @@ An elegant, highly interactive, and premium **Next.js 16** administration and ch
 ## ✨ Features
 
 - **🚀 Smart AI Chat Workspace**: Ask plain English questions and watch the AI formulate real-time SQL queries with typewriter streaming effects and beautiful interactive results tables.
-- **📚 Rich Knowledge Ingestion (Training)**: Clean forms supporting custom Question↔SQL mapping, raw DDL schemas, and freeform documentation with supports for both direct single entry and bulk JSON uploads.
-- **🗃️ Vector Collection Manager**: Browse, filter, search, modify, and delete training records currently vectorized inside Qdrant.
+- **📚 Rich Knowledge Ingestion (Training)**: Clean forms supporting custom Question↔SQL mapping, raw DDL schemas, freeform documentation, and **Business Glossary** entries (term, meaning, SQL hint, category) — all with supports for both direct single entry and bulk JSON uploads.
+- **🗃️ Vector Collection Manager**: Browse, filter, search, modify, and delete training records from all four Qdrant collections: `question-sql`, `ddl`, `docs`, and `glossary`.
 - **🎨 Premium Visual Aesthetics**:
   - Full-screen fluid layout with a collapsible, responsive sidebar.
   - Gorgeous dark-themed syntax highlights for SQL code blocks.
@@ -33,19 +33,19 @@ frontend/
 │   ├── page.jsx            # Dynamic root routing (Redirects to /chat)
 │   │
 │   ├── chat/
-│   │   └── page.jsx        # Rich conversational workspace with live SQL execution
+│   │   └── page.jsx        # Rich conversational workspace with live SQL execution and paginated results table
 │   │
 │   ├── training/
-│   │   └── page.jsx        # Data insertion hub (Forms & validation for Q&A, DDL, Docs)
+│   │   └── page.jsx        # Data insertion hub (Forms & bulk JSON upload for Q&A, DDL, Docs, Glossary)
 │   │
 │   └── collection/
-│       └── page.jsx        # Database browser with edit and delete capabilities
+│       └── page.jsx        # Vector database browser with edit/delete for all four collection types
 │
 ├── components/
-│   └── Sidebar.jsx         # Highly interactive navigation menu
+│   └── Sidebar.jsx         # Responsive navigation menu with Chat, Training, and Collection links
 │
 ├── lib/
-│   └── api.js              # Elegant Axios/Fetch-based api connector abstraction layer
+│   └── api.js              # Fetch-based API connector — all backend calls centralised here
 │
 ├── public/                 # Static graphical assets & icon mappings
 ├── tsconfig.json           # Fully structured TypeScript typing rules
@@ -116,17 +116,23 @@ npm run start
 
 ## 📡 API Integrations Used
 
-The frontend interacts with the FastAPI backend across three main modules:
+All backend calls are centralised in `lib/api.js` and routed through a single `fetch` wrapper.
 
 | Feature Section | API Path | Method | Description |
 |:---|:---|:---|:---|
 | **Chat Hub** | `/chat/` | `POST` | Send natural language questions and fetch generated SQL and database results. |
-| **Ingestion** | `/train/question-sql` | `POST` | Store a custom user-question to SQL pair template. |
-| **Ingestion** | `/train/ddl` | `POST` | Ingest physical layout schemas. |
-| **Ingestion** | `/train/docs` | `POST` | Supplement context with external documentation. |
-| **Vector DB** | `/collection/:type` | `GET` | Retrieve and preview indexed payload vectors. |
-| **Vector DB** | `/collection/:type/:id` | `PUT` | Mutate and update existing vectors. |
-| **Vector DB** | `/collection/:type/:id` | `DELETE` | Delete vector schema keys. |
+| **Ingestion** | `/train/question-sql` | `POST` | Store a single user-question to SQL pair. |
+| **Ingestion** | `/train/question-sql/bulk` | `POST` | Bulk upload Q&A pairs via JSON. |
+| **Ingestion** | `/train/ddl` | `POST` | Ingest a single table DDL schema. |
+| **Ingestion** | `/train/ddl/bulk` | `POST` | Bulk upload DDL schemas via JSON. |
+| **Ingestion** | `/train/docs` | `POST` | Add a documentation or data-dictionary snippet. |
+| **Ingestion** | `/train/docs/bulk` | `POST` | Bulk upload documentation snippets via JSON. |
+| **Ingestion** | `/train/glossary` | `POST` | Add a single business glossary term (term, meaning, sql_hint, category). |
+| **Ingestion** | `/train/glossary/bulk` | `POST` | Bulk upload glossary entries via JSON. |
+| **Vector DB** | `/collection/:type` | `GET` | Retrieve and preview indexed payload vectors (`question-sql`, `ddl`, `docs`, `glossary`). |
+| **Vector DB** | `/collection/:type/:id` | `PUT` | Mutate and update an existing vector record. |
+| **Vector DB** | `/collection/:type/:id` | `DELETE` | Delete a vector record from Qdrant. |
+| **SQL Execute** | `/execute/` | `POST` | Execute a raw read-only SQL query directly against PostgreSQL. |
 
 ---
 
