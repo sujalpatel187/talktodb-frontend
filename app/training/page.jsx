@@ -5,6 +5,7 @@ import {
   trainQuestionSql, trainQuestionSqlBulk,
   trainDdl, trainDdlBulk,
   trainDocs, trainDocsBulk,
+  trainGlossary, trainGlossaryBulk,
 } from "@/lib/api";
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
@@ -116,9 +117,10 @@ function SubmitBtn({ loading, label, accent }) {
 
 // ─── Tabs ─────────────────────────────────────────────────────────────────────
 const TABS = [
-  { id: "qa", label: "Q&A Pairs", accent: "#6c63ff", icon: "❓" },
-  { id: "ddl", label: "DDL Schemas", accent: "#06b6d4", icon: "🗂" },
-  { id: "docs", label: "Documentation", accent: "#10b981", icon: "📄" },
+  { id: "qa", label: "Q&A Pairs", accent: "#6c63ff", icon: "\u2753" },
+  { id: "ddl", label: "DDL Schemas", accent: "#06b6d4", icon: "\uD83D\uDDC2" },
+  { id: "docs", label: "Documentation", accent: "#10b981", icon: "\uD83D\uDCC4" },
+  { id: "glossary", label: "Business Glossary", accent: "#f59e0b", icon: "\uD83D\uDCD6" },
 ];
 
 // ─── Q&A Training Tab ─────────────────────────────────────────────────────────
@@ -311,7 +313,7 @@ function DDLTab({ toast }) {
   );
 }
 
-// ─── Docs Training Tab ────────────────────────────────────────────────────────
+// ─── Docs Training Tab ──────────────────────────────────────────────────────────────────────────────────────────
 function DocsTab({ toast }) {
   const [single, setSingle] = useState({ content: "", category: "", type: "" });
   const [bulk, setBulk] = useState("");
@@ -411,7 +413,116 @@ function DocsTab({ toast }) {
   );
 }
 
-// ─── Main Training Page ───────────────────────────────────────────────────────
+// ─── Glossary Training Tab ──────────────────────────────────────────────────────────────────────────────
+function GlossaryTab({ toast }) {
+  const [single, setSingle] = useState({ term: "", meaning: "", sql_hint: "", category: "business_term" });
+  const [bulk, setBulk] = useState("");
+  const [loadSingle, setLoadSingle] = useState(false);
+  const [loadBulk, setLoadBulk] = useState(false);
+  const ACCENT = "#f59e0b";
+
+  const handleSingle = async (e) => {
+    e.preventDefault();
+    if (!single.term.trim() || !single.meaning.trim()) return;
+    setLoadSingle(true);
+    try {
+      await trainGlossary(single);
+      toast("success", `Glossary term "${single.term}" saved!`);
+      setSingle({ term: "", meaning: "", sql_hint: "", category: "business_term" });
+    } catch (err) {
+      toast("error", err.message);
+    } finally {
+      setLoadSingle(false);
+    }
+  };
+
+  const handleBulk = async (e) => {
+    e.preventDefault();
+    let records;
+    try {
+      records = JSON.parse(bulk);
+      if (!Array.isArray(records)) throw new Error("Must be a JSON array");
+    } catch {
+      toast("error", "Invalid JSON — must be an array of { term, meaning, sql_hint, category } objects.");
+      return;
+    }
+    setLoadBulk(true);
+    try {
+      await trainGlossaryBulk(records);
+      toast("success", `${records.length} glossary term(s) saved!`);
+      setBulk("");
+    } catch (err) {
+      toast("error", err.message);
+    } finally {
+      setLoadBulk(false);
+    }
+  };
+
+  return (
+    <div className="grid lg:grid-cols-2 gap-4">
+      {/* Single */}
+      <Card title="Add Business Term" subtitle="Map an acronym or abbreviation to its meaning and SQL rule" accent={ACCENT}>
+        <form onSubmit={handleSingle} className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Term / Acronym">
+              <input
+                style={inputStyle}
+                value={single.term}
+                onChange={(e) => setSingle((s) => ({ ...s, term: e.target.value }))}
+                placeholder="e.g. MDCS"
+                required
+              />
+            </Field>
+            <Field label="Category">
+              <input
+                style={inputStyle}
+                value={single.category}
+                onChange={(e) => setSingle((s) => ({ ...s, category: e.target.value }))}
+                placeholder="business_term"
+              />
+            </Field>
+          </div>
+          <Field label="Meaning">
+            <textarea
+              style={{ ...textareaStyle, minHeight: "70px" }}
+              value={single.meaning}
+              onChange={(e) => setSingle((s) => ({ ...s, meaning: e.target.value }))}
+              placeholder="e.g. Dairy Cooperative Society registered after 2023-02-21"
+              required
+            />
+          </Field>
+          <Field label="SQL Hint (optional)">
+            <textarea
+              style={{ ...textareaStyle, minHeight: "70px" }}
+              value={single.sql_hint}
+              onChange={(e) => setSingle((s) => ({ ...s, sql_hint: e.target.value }))}
+              placeholder={"society_type='DAIRY' AND registration_date>'2023-02-21'"}
+            />
+          </Field>
+          <SubmitBtn loading={loadSingle} label="Save Glossary Term" accent={ACCENT} />
+        </form>
+      </Card>
+
+      {/* Bulk */}
+      <Card title="Bulk Upload Glossary" subtitle="Paste a JSON array of business terms" accent={ACCENT}>
+        <form onSubmit={handleBulk} className="space-y-3">
+          <Field label="JSON Array">
+            <textarea
+              style={{ ...textareaStyle, minHeight: "240px" }}
+              value={bulk}
+              onChange={(e) => setBulk(e.target.value)}
+              placeholder={`[\n  {\n    "term": "MDCS",\n    "meaning": "Dairy Cooperative Society registered after 2023-02-21",\n    "sql_hint": "society_type='DAIRY' AND registration_date>'2023-02-21'",\n    "category": "business_term"\n  },\n  {\n    "term": "PACS",\n    "meaning": "Primary Agriculture Credit Society",\n    "sql_hint": "",\n    "category": "business_term"\n  }\n]`}
+              required
+            />
+          </Field>
+          <SubmitBtn loading={loadBulk} label="Bulk Upload" accent={ACCENT} />
+        </form>
+      </Card>
+    </div>
+  );
+}
+
+// ─── Main Training Page ─────────────────────────────────────────────────────────────────────────────────────────
 export default function TrainingPage() {
   const [activeTab, setActiveTab] = useState("qa");
   const [toasts, setToasts] = useState([]);
@@ -478,6 +589,7 @@ export default function TrainingPage() {
         {activeTab === "qa" && <QATab toast={addToast} />}
         {activeTab === "ddl" && <DDLTab toast={addToast} />}
         {activeTab === "docs" && <DocsTab toast={addToast} />}
+        {activeTab === "glossary" && <GlossaryTab toast={addToast} />}
       </div>
 
       <Toast toasts={toasts} />

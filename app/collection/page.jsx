@@ -371,6 +371,18 @@ const TABS = [
       { key: "type", label: "Type", rows: 1 },
     ],
   },
+  {
+    id: "glossary",
+    label: "Glossary",
+    accent: "#f59e0b",
+    icon: "📖",
+    fields: [
+      { key: "term", label: "Term", rows: 1 },
+      { key: "meaning", label: "Meaning", rows: 3 },
+      { key: "sql_hint", label: "SQL Hint", rows: 3, mono: true },
+      { key: "category", label: "Category", rows: 1 },
+    ],
+  },
 ];
 
 // ─── Main Collection Page ─────────────────────────────────────────────────────
